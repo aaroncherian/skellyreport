@@ -7,6 +7,8 @@ class DataFrameBuilder:
     def __init__(self, marker_list: list, data_3d_array: np.ndarray = None, path_to_data: Union[Path, str] = None):
         if data_3d_array is not None and path_to_data is not None:
             raise ValueError("Only one of data_array or path_to_data should be provided, not both.")
+        
+        
         if data_3d_array is None and path_to_data is None:
             raise ValueError("One of data_array or path_to_data must be provided.")
         

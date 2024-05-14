@@ -1,14 +1,11 @@
 
+from scatter_plot_3d import create_3d_scatter_from_dataframe
+from joint_trajectory_plots import create_joint_trajectory_subplot
+import plotly.io as pio
+from report_styles import styles
 
-from dash_app.report_generation.report_syles import styles
-from dash_app.report_generation.html_report_utils import fig_to_html, generate_position_rmse_table, generate_velocity_rmse_table, create_position_subplots_from_individual_figs, create_velocity_subplots_from_individual_figs, create_position_indicators, create_velocity_indicators
 
-from dash_app.data_utils.extract_rmse_values import extract_overall_rmse_values_from_dataframe
-from dash_app.ui_components.dashboard import update_joint_marker_card
-from dash_app.plotting.rmse_joint_plot import create_rmse_joint_bar_plot, create_position_velocity_rmse_joint_bar_plot
-from dash_app.plotting.joint_trajectory_plots import create_joint_trajectory_plots
-from dash_app.plotting.joint_velocity_plots import create_joint_velocity_plots
-from dash_app.plotting.scatter_plot_3d import create_3d_scatter_from_dataframe
+
 
 def generate_navigation_links(unique_markers):
     navigation_html = "<div class='navigation'>"
@@ -20,42 +17,12 @@ def generate_navigation_links(unique_markers):
 
     
 
-def generate_marker_specific_html(marker, position_dataframe_of_3d_data, position_rmse_dataframe, velocity_dataframe_of_3d_data, velocity_rmse_dataframe):
+def generate_marker_specific_html(marker, position_dataframe_of_3d_data):
 
     marker_specific_html = f"<div class='marker-section' id='{marker}'><center><h1>{marker}</h1></center>"
-
-    # Get RMSE values for this marker and generate table
-    marker_position_rmse_values = {
-        'x': update_joint_marker_card(marker, position_rmse_dataframe)[0],
-        'y': update_joint_marker_card(marker, position_rmse_dataframe)[1],
-        'z': update_joint_marker_card(marker, position_rmse_dataframe)[2]
-    }
-
-    marker_velocity_rmse_values = {
-        'x': update_joint_marker_card(marker, velocity_rmse_dataframe)[0],
-        'y': update_joint_marker_card(marker, velocity_rmse_dataframe)[1],
-        'z': update_joint_marker_card(marker, velocity_rmse_dataframe)[2]
-    }
-
-    rmse_position_table_html = generate_position_rmse_table(marker_position_rmse_values)
-    rmse_velocity_table_html = generate_velocity_rmse_table(marker_velocity_rmse_values)
-
-
-    marker_specific_html += "<div class='rmse-tables-container'>"
-    marker_specific_html += rmse_position_table_html
-    marker_specific_html += rmse_velocity_table_html
-    marker_specific_html += "</div>"
-
-    marker_specific_html += f"<center><h2> Position Comparison (mm) </h1></center>"
-    fig_x, fig_y, fig_z = create_joint_trajectory_plots(marker, position_dataframe_of_3d_data, color_of_cards='white')
-    figure = create_position_subplots_from_individual_figs(fig_x, fig_y, fig_z, color_of_cards='white')
+    marker_specific_html += f"<center><h2> Position (mm) </h1></center>"
+    figure = create_joint_trajectory_subplot(marker, position_dataframe_of_3d_data, color_of_cards='white')
     marker_specific_html += fig_to_html(figure)
-
-    marker_specific_html += f"<center><h2> Velocity Comparison (mm/frame) </h1></center>"
-    fig_x_vel, fig_y_vel, fig_z_vel = create_joint_velocity_plots(marker, velocity_dataframe_of_3d_data, color_of_cards='white')
-    figure_vel = create_velocity_subplots_from_individual_figs(fig_x_vel, fig_y_vel, fig_z_vel, color_of_cards='white')
-    # Convert figures to HTML and add to the report content
-    marker_specific_html += fig_to_html(figure_vel)
 
     marker_specific_html += "</div>"  # Ends the section for a specific marker
 
@@ -65,7 +32,7 @@ def generate_marker_specific_html(marker, position_dataframe_of_3d_data, positio
 def generate_3d_scatter_plot_html(position_dataframe_of_3d_data):
     scatter_plot_html = ""
     print('creating 3d scatter plot')
-    scatter_plot = create_3d_scatter_from_dataframe(dataframe_of_3d_data=position_dataframe_of_3d_data)
+    scatter_plot = create_3d_scatter_from_dataframe(dataframe_of_3d_data=position_dataframe_of_3d_data[position_dataframe_of_3d_data['frame']%3==0])
     print('scatter created, converting to html')
     scatter_plot_html += fig_to_html(scatter_plot)
     print('html scatter created')
@@ -76,11 +43,11 @@ def generate_html_report(position_dataframe_of_3d_data, recording_name = None):
 
     # Start of the HTML content with included CSS for styling
     if recording_name is not None:
-        html_content = f"<html><head><title>{recording_name} Error Metrics </title>{styles}</head><body>"
-        report_title = f"{recording_name}"
+        html_content = f"<html><head><title>{recording_name} FreeMoCap Report </title>{styles}</head><body>"
+        report_title = f"Recording: {recording_name}"
 
     else:
-        html_content = f"<html><head><title>Error Metrics</title>{styles}</head><body>"
+        html_content = f"<html><head><title>FreeMoCap Report</title>{styles}</head><body>"
         report_title = f"Error Metrics Report"
     
     html_content += f"<h1 style='text-align: center; margin-top: 50px;'>{report_title}</h1>"
@@ -95,12 +62,14 @@ def generate_html_report(position_dataframe_of_3d_data, recording_name = None):
 
     # html_content += generate_overall_joint_rmse_bar_plot(position_rmse_dataframe, velocity_rmse_dataframe)
 
-    # for marker in unique_markers:
-    #     html_content += generate_marker_specific_html(marker, position_dataframe_of_3d_data, position_rmse_dataframe, velocity_dataframe_of_3d_data, velocity_rmse_dataframe)
+    for marker in unique_markers:
+        html_content += generate_marker_specific_html(marker, position_dataframe_of_3d_data)
 
-    # html_content += "</body></html>"
+    html_content += "</body></html>"
 
     return html_content
 
 
 
+def fig_to_html(fig):
+    return pio.to_html(fig, full_html=False, include_plotlyjs='cdn')
